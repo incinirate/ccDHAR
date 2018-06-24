@@ -183,7 +183,7 @@ local function parseOffset(numStr)
     return { "pixel", 0 }
   elseif numStr:match("%d+px") then
     return { "pixel", tonumber(numStr:match("%d+")) }
-  elseif numStr:match("%d+rem") then
+  elseif numStr:match("%d+remd") then
     return { "remain", tonumber(numStr:match("%d+")) }
   elseif numStr:match("%d+%%") then
     return { "percent", tonumber(numStr:match("%d+")) }
@@ -495,12 +495,12 @@ function renderer.renderToSurface(surf, node, context)
       end
 
       local width, height
-      width = resolveVal(context, "width", s.width or "100rem")
+      width = resolveVal(context, "width", s.width or "100remd")
 
       if not s.height and el.adapter and el.adapter.resolveHeight then
         s.height = el.adapter:resolveHeight(s, { flow = context, width = width }, resolveVal)
       end
-      height = resolveVal(context, "height", s.height or "100rem")
+      height = resolveVal(context, "height", s.height or "100remd")
 
       local left
       if s.right then
