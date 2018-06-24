@@ -51,7 +51,14 @@ function basicTextComponent:render(surf, position, styles, resolver)
   end
 
   local cY = position.top + topPad
-
+  
+  local totalSize = 1;
+  local parent = self;
+  while (parent ~= null) do
+    totalSize = totalSize * tonumber(parent.styles["font-size"]:substring(1,1));
+    parent = parent.parent;
+  end
+  
   if styles["background"] then
     local path = styles["background"]:match("url(%b())"):sub(2, -2)
     local img = surface.load(path)
@@ -79,7 +86,21 @@ function basicTextComponent:render(surf, position, styles, resolver)
       surf:drawSurfaceSmall(img, position.left + math.floor((position.width - rightPad - img.width / 2) / 2), cY)
     end
   elseif styles.content then
-    if styles["font-size"] == "2em" then
+    
+    if styles["font-size"] == "2rem" then
+      if bgc <= 0 then
+        error("'font-size: 2rem' requires 'background-color' to be present")
+      end
+
+      writeBig(surf, resolver({}, "string", styles.content),
+        position.left + leftPad, cY,
+        resolver({}, "color", styles.color), bgc,
+        styles["text-align"] or "left", position.width - leftPad - rightPad)
+    elseif styles["font-size"] == "1rem" or totalSize <= 1 then
+      util.wrappedWrite(surf, resolver({}, "string", styles.content),
+        position.left + leftPad, cY, position.width - leftPad - rightPad,
+        resolver({}, "color", styles.color), styles["text-align"] or "left", lineHeight)
+    else
       if bgc <= 0 then
         error("'font-size: 2em' requires 'background-color' to be present")
       end
@@ -88,15 +109,12 @@ function basicTextComponent:render(surf, position, styles, resolver)
         position.left + leftPad, cY,
         resolver({}, "color", styles.color), bgc,
         styles["text-align"] or "left", position.width - leftPad - rightPad)
-    else
-      util.wrappedWrite(surf, resolver({}, "string", styles.content),
-        position.left + leftPad, cY, position.width - leftPad - rightPad,
-        resolver({}, "color", styles.color), styles["text-align"] or "left", lineHeight)
     end
   else
     if styles["font-size"] == "2em" then
+      if styles["font-size"] == "2rem" then
       if bgc <= 0 then
-        error("'font-size: 2em' requires 'background-color' to be present")
+        error("'font-size: 2rem' requires 'background-color' to be present")
       end
 
       -- TODO Wrapping support?
@@ -105,7 +123,7 @@ function basicTextComponent:render(surf, position, styles, resolver)
         position.left + leftPad, cY,
         resolver({}, "color", styles.color), bgc,
         styles["text-align"] or "left", position.width - leftPad - rightPad)
-    else
+    elseif styles["font-size"] == "1rem" or totalSize <= 1 then
       local children = self.node.children
       local acc = ""
       
@@ -126,6 +144,14 @@ function basicTextComponent:render(surf, position, styles, resolver)
           position.left + leftPad, cY, position.width - leftPad - rightPad,
           resolver({}, "color", styles.color), styles["text-align"] or "left", lineHeight)
       end
+    else
+      -- TODO Wrapping support?
+      local text = self.node.children[1].content or ""
+      writeBig(surf, text,
+        position.left + leftPad, cY,
+        resolver({}, "color", styles.color), bgc,
+        styles["text-align"] or "left", position.width - leftPad - rightPad)
+    elseif styles["font-size"] == "1rem" or totalSize <= 1 then
     end
   end
 end
@@ -148,27 +174,31 @@ function basicTextComponent:resolveHeight(styles, context, resolver)
     local img = surface.load(path)
 
     cY = math.ceil(img.height / 3)
-  elseif styles["font-size"] == "2em" then
+  elseif styles["font-size"] == "2rem" then
     cY = math.ceil(font.height / 3)
-  elseif styles.content then
-    cY = util.wrappedWrite(nil, resolver({}, "string", styles.content),
-      0, cY, context.width - leftPad - rightPad)
-  else
-    local children = self.node.children
-    local acc = ""
-    foreach(child, children) do
-      if child.type == "text" then
-        acc = acc .. child.content
-      elseif child.name == "br" then
-        cY = util.wrappedWrite(nil, acc,
-          position.left + leftPad, cY, position.width - leftPad - rightPad)
-        acc = ""
-        cY = cY + 1
-      elseif child.name == "span" then
-        acc = acc .. child.children[1].content
+  else styles["font-size"] == "1rem" or totalSize <= 1 then
+    if styles.content then
+      cY = util.wrappedWrite(nil, resolver({}, "string", styles.content),
+       0, cY, context.width - leftPad - rightPad)
+    else
+      local children = self.node.children
+      local acc = ""
+      foreach(child, children) do
+        if child.type == "text" then
+          acc = acc .. child.content
+        elseif child.name == "br" then
+          cY = util.wrappedWrite(nil, acc,
+            position.left + leftPad, cY, position.width - leftPad - rightPad)
+          acc = ""
+          cY = cY + 1
+        elseif child.name == "span" then
+          acc = acc .. child.children[1].content
+        end
       end
+      cY = cY + 1
     end
-    cY = cY + 1
+  else
+    cY = math.ceil(font.height / 3)
   end
 
   if styles["line-height"] then
