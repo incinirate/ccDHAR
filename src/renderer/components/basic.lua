@@ -27,9 +27,10 @@ local function calcTextSize(node)
     return 1
   end
   
-  local size, root = node.styles["font-size"]:match("(%d+)(r?)em")
+  
+  local size, root = node.styles["font-size"] and node.styles["font-size"]:match("(%d+)(r?)em")
   if not size then
-    return 1
+    size = 1
   end
   
   if not root and node.parent then
