@@ -22,6 +22,23 @@ local function calcSizeBig(text)
   return math.ceil(calcWidth(text) / 2) * 2, math.ceil(font.height / 3) * 3
 end
 
+local function calcTextSize(node)
+  if not node.styles["font-size"] then
+    return 1
+  end
+  
+  local size, root = node.styles["font-size"]:match("(%d+)(r?)em")
+  if not size then
+    return 1
+  end
+  
+  if not root and node.parent then
+    return calcTextSize(node.parent) * size
+  end
+  
+  return size
+end
+
 function basicTextComponent.new(node)
   return setmetatable({ node = node }, { __index = basicTextComponent })
 end
@@ -79,9 +96,9 @@ function basicTextComponent:render(surf, position, styles, resolver)
       surf:drawSurfaceSmall(img, position.left + math.floor((position.width - rightPad - img.width / 2) / 2), cY)
     end
   elseif styles.content then
-    if styles["font-size"] == "2em" then
+    if textSize > 1 then
       if bgc <= 0 then
-        error("'font-size: 2em' requires 'background-color' to be present")
+        error("font size 2 requires 'background-color' to be present")
       end
 
       writeBig(surf, resolver({}, "string", styles.content),
@@ -94,9 +111,9 @@ function basicTextComponent:render(surf, position, styles, resolver)
         resolver({}, "color", styles.color), styles["text-align"] or "left", lineHeight)
     end
   else
-    if styles["font-size"] == "2em" then
+    if textSize > 1 then
       if bgc <= 0 then
-        error("'font-size: 2em' requires 'background-color' to be present")
+        error("font size 2 requires 'background-color' to be present")
       end
 
       -- TODO Wrapping support?
@@ -148,7 +165,7 @@ function basicTextComponent:resolveHeight(styles, context, resolver)
     local img = surface.load(path)
 
     cY = math.ceil(img.height / 3)
-  elseif styles["font-size"] == "2em" then
+  elseif fontSize > 2 then
     cY = math.ceil(font.height / 3)
   elseif styles.content then
     cY = util.wrappedWrite(nil, resolver({}, "string", styles.content),
