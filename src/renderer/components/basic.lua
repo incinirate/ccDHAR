@@ -23,11 +23,6 @@ local function calcSizeBig(text)
 end
 
 local function calcTextSize(node)
-  if not node.styles["font-size"] then
-    return 1
-  end
-  
-  
   local size, root = node.styles["font-size"] and node.styles["font-size"]:match("(%d+)(r?)em")
   if not size then
     size = 1
